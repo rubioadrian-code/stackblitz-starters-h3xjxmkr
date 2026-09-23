@@ -8,7 +8,17 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default async function Dashboard() {
-  const { data: tickets } = await supabase.from('incidencias').select('*');
+  let tickets: any[] = [];
+  
+  try {
+    const { data, error } = await supabase.from('incidencias').select('*');
+    if (!error && data) {
+      tickets = data;
+    }
+  } catch (err) {
+    console.error('Error al conectar con Supabase:', err);
+  }
+
   const columnas = ['En Análisis', 'En Desarrollo', 'Testing/QA', 'Desplegado'];
 
   return (
@@ -36,7 +46,7 @@ export default async function Dashboard() {
                       {ticket.jira_key}
                     </span>
                     <span className="text-xs font-bold px-2 py-1 rounded bg-emerald-100 text-emerald-700">
-                      {ticket.priority}
+                      {ticket.priority || 'Normal'}
                     </span>
                   </div>
                   <h3 className="font-semibold text-slate-800 text-sm mb-2 leading-tight">{ticket.title}</h3>
