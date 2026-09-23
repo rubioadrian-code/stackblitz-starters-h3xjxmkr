@@ -14,13 +14,8 @@ export default function Dashboard() {
   const [totalPacientes, setTotalPacientes] = useState<number>(0);
   const [topDiagnosticos, setTopDiagnosticos] = useState<{ [key: string]: number }[]>([]);
 
-  // Base de datos de usuarios con Nombre, Apellido, Mail, Perfil, Licencia y Estado claramente separados
-  const [usuarios, setUsuarios] = useState<any[]>([
-    { id: 1, nombre: 'Roberto', apellido: 'Gómez', email: 'roberto.gomez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
-    { id: 2, nombre: 'María Laura', apellido: 'Pérez', email: 'marialaura.perez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Enterprise' },
-    { id: 3, nombre: 'Carlos', apellido: 'Ruiz', email: 'carlos.ruiz@camdoctor.com', perfil: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
-    { id: 4, nombre: 'Ana Sofía', apellido: 'Admin', email: 'ana.admin@camdoctor.com', perfil: 'Administrador', estado: 'Activo', licencia: 'Workspace Enterprise' }
-  ]);
+  // Iniciamos la lista de usuarios vacía (sin datos de prueba)
+  const [usuarios, setUsuarios] = useState<any[]>([]);
   
   const [inputNombre, setInputNombre] = useState('');
   const [inputApellido, setInputApellido] = useState('');
@@ -80,7 +75,7 @@ export default function Dashboard() {
     reader.readAsBinaryString(file);
   };
 
-  // Carga Masiva de Usuarios vía Excel
+  // Carga Masiva de Usuarios vía Excel (Mapeo robusto de correo y propiedades)
   const handleUsuariosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -93,15 +88,30 @@ export default function Dashboard() {
       const ws = wb.Sheets[wsname];
       const data: any[] = XLSX.utils.sheet_to_json(ws);
 
-      const nuevosImportados = data.map((row, idx) => ({
-        id: usuarios.length + idx + 1,
-        nombre: row['Nombre'] || row['nombre'] || 'Sin nombre',
-        apellido: row['Apellido'] || row['apellido'] || '',
-        email: row['Email'] || row['email'] || row['Mail'] || row['Correo'] || 'sin-correo@camdoctor.com',
-        perfil: row['Perfil'] || row['perfil'] || row['Rol'] || row['rol'] || 'Médico',
-        estado: row['Estado'] || row['estado'] || 'Activo',
-        licencia: row['Licencia'] || row['licencia'] || row['Tipo de Licencia'] || 'Workspace Starter'
-      }));
+      const nuevosImportados = data.map((row, idx) => {
+        // Búsqueda flexible de la clave del correo sin importar mayúsculas o variaciones
+        const correoEncontrado = 
+          row['Email'] || row['email'] || row['EMAIL'] || 
+          row['Mail'] || row['mail'] || row['MAIL'] || 
+          row['Correo'] || row['correo'] || row['CORREO'] || 
+          row['E-mail'] || row['e-mail'] || '';
+
+        const nombreEncontrado = row['Nombre'] || row['nombre'] || row['NOMBRE'] || 'Sin nombre';
+        const apellidoEncontrado = row['Apellido'] || row['apellido'] || row['APELLIDO'] || '';
+        const perfilEncontrado = row['Perfil'] || row['perfil'] || row['PERFIL'] || row['Rol'] || row['rol'] || 'Médico';
+        const licenciaEncontrada = row['Licencia'] || row['licencia'] || row['LICENCIA'] || row['Tipo de Licencia'] || 'Workspace Starter';
+        const estadoEncontrado = row['Estado'] || row['estado'] || row['ESTADO'] || 'Activo';
+
+        return {
+          id: usuarios.length + idx + 1,
+          nombre: String(nombreEncontrado).trim(),
+          apellido: String(apellidoEncontrado).trim(),
+          email: String(correoEncontrado).trim(),
+          perfil: String(perfilEncontrado).trim(),
+          estado: String(estadoEncontrado).trim(),
+          licencia: String(licenciaEncontrada).trim()
+        };
+      });
 
       setUsuarios([...usuarios, ...nuevosImportados]);
     };
@@ -115,9 +125,9 @@ export default function Dashboard() {
 
     const nuevoUsuario = {
       id: usuarios.length + 1,
-      nombre: inputNombre,
-      apellido: inputApellido,
-      email: inputEmail,
+      nombre: inputNombre.trim(),
+      apellido: inputApellido.trim(),
+      email: inputEmail.trim(),
       perfil: inputPerfil,
       estado: 'Activo',
       licencia: inputLicencia
@@ -129,7 +139,7 @@ export default function Dashboard() {
     setInputEmail('');
   };
 
-  // Filtrado de usuarios según los inputs de filtro por columna
+  // Filtrado de usuarios
   const usuariosFiltrados = usuarios.filter(user => {
     return (
       user.nombre.toLowerCase().includes(filtroNombre.toLowerCase()) &&
@@ -144,7 +154,7 @@ export default function Dashboard() {
 
   const totalUsuarios = usuarios.length;
   const usuariosActivos = usuarios.filter(u => u.estado === 'Activo').length;
-  const licenciasEnterprise = usuarios.filter(u => u.licencia.includes('Enterprise')).length;
+  const licenciasEnterprise = usuarios.filter(u => u.licencia.toLowerCase().includes('enterprise')).length;
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 font-sans">
@@ -242,7 +252,7 @@ export default function Dashboard() {
           <div className="bg-slate-50 p-4 rounded-md border border-slate-200 flex flex-col justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-1">Carga Masiva (Excel / CSV)</h3>
-              <p className="text-xs text-slate-500 mb-4">Asegúrate de que tu archivo tenga cabeceras como: <b>Nombre</b>, <b>Apellido</b>, <b>Email</b>, <b>Perfil</b>, <b>Licencia</b>.</p>
+              <p className="text-xs text-slate-500 mb-4">Asegúrate de que tu archivo tenga cabeceras claras como: <b>Nombre</b>, <b>Apellido</b>, <b>Email</b> (o <b>Mail</b> / <b>Correo</b>), <b>Perfil</b>, <b>Licencia</b>.</p>
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
@@ -256,7 +266,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tabla con Filtros por Columna (Sin columna de acciones de bajas/altas) */}
+        {/* Tabla con Filtros por Columna */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -323,7 +333,7 @@ export default function Dashboard() {
                 <tr key={user.id} className="hover:bg-slate-50">
                   <td className="p-3 font-semibold text-slate-800">{user.nombre}</td>
                   <td className="p-3 font-semibold text-slate-800">{user.apellido}</td>
-                  <td className="p-3 text-slate-600">{user.email}</td>
+                  <td className="p-3 text-slate-600 font-medium">{user.email}</td>
                   <td className="p-3">
                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold border border-blue-100">
                       {user.perfil}
@@ -341,8 +351,8 @@ export default function Dashboard() {
               ))}
               {usuariosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-4 text-center text-slate-400 text-sm">
-                    No se encontraron usuarios con los filtros aplicados.
+                  <td colSpan={6} className="p-8 text-center text-slate-400 text-sm">
+                    No hay usuarios registrados. Agrega uno manualmente o sube un archivo Excel con la información.
                   </td>
                 </tr>
               )}
