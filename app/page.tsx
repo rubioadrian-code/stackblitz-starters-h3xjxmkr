@@ -10,25 +10,25 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Dashboard() {
-  // Estados para Incidencias (Tablero)
+  // Estados para el Tablero Jira
   const [tickets, setTickets] = useState<any[]>([]);
 
-  // Estados para Analítica de Atenciones
+  // Estados para Analítica
   const [totalPacientes, setTotalPacientes] = useState<number>(0);
   const [topDiagnosticos, setTopDiagnosticos] = useState<{ [key: string]: number }[]>([]);
 
-  // Estados para Gestión de Usuarios y Licencias (Cam Doctor)
+  // Estado inicial con datos limpios y estructurados de usuarios
   const [usuarios, setUsuarios] = useState<any[]>([
-    { id: 1, nombre: 'Dr. Roberto Gómez', email: 'roberto.gomez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
-    { id: 2, nombre: 'Dra. María Laura Pérez', email: 'marialaura@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Enterprise' },
-    { id: 3, nombre: 'Lic. Carlos Ruiz', email: 'carlos.ruiz@camdoctor.com', perfil: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
+    { id: 1, nombre: 'Roberto Gómez', email: 'roberto.gomez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
+    { id: 2, nombre: 'María Laura Pérez', email: 'marialaura.perez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Enterprise' },
+    { id: 3, nombre: 'Carlos Ruiz', email: 'carlos.ruiz@camdoctor.com', perfil: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
     { id: 4, nombre: 'Ana Sofía Admin', email: 'ana.admin@camdoctor.com', perfil: 'Administrador', estado: 'Activo', licencia: 'Workspace Enterprise' }
   ]);
   
-  const [nuevoNombre, setNuevoNombre] = useState('');
-  const [nuevoEmail, setNuevoEmail] = useState('');
-  const [nuevoPerfil, setNuevoPerfil] = useState('Médico');
-  const [nuevaLicencia, setNuevaLicencia] = useState('Workspace Business Plus');
+  const [inputNombre, setInputNombre] = useState('');
+  const [inputEmail, setInputEmail] = useState('');
+  const [inputPerfil, setInputPerfil] = useState('Médico');
+  const [inputLicencia, setInputLicencia] = useState('Workspace Business Plus');
 
   useEffect(() => {
     async function fetchTickets() {
@@ -44,7 +44,7 @@ export default function Dashboard() {
     fetchTickets();
   }, []);
 
-  // Manejador para Analítica de Atenciones (Excel/CSV)
+  // Carga de Atenciones (Excel/CSV)
   const handleAtencionesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,7 +75,7 @@ export default function Dashboard() {
     reader.readAsBinaryString(file);
   };
 
-  // Manejador para Carga Masiva de Usuarios
+  // Carga Masiva de Usuarios vía Excel (Mapeo Estricto)
   const handleUsuariosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -88,40 +88,40 @@ export default function Dashboard() {
       const ws = wb.Sheets[wsname];
       const data: any[] = XLSX.utils.sheet_to_json(ws);
 
-      const nuevosCargados = data.map((row, idx) => ({
+      const nuevosImportados = data.map((row, idx) => ({
         id: usuarios.length + idx + 1,
-        nombre: row['Nombre'] || row['nombre'] || row['Nombre y Apellido'] || 'Sin nombre',
-        email: row['Email'] || row['email'] || row['Mail'] || 'sin-correo@camdoctor.com',
+        nombre: row['Nombre'] || row['nombre'] || row['Nombre y Apellido'] || row['Apellido y Nombre'] || 'Sin nombre',
+        email: row['Email'] || row['email'] || row['Mail'] || row['Correo'] || 'sin-correo@camdoctor.com',
         perfil: row['Perfil'] || row['perfil'] || row['Rol'] || row['rol'] || 'Médico',
         estado: row['Estado'] || row['estado'] || 'Activo',
-        licencia: row['Licencia'] || row['licencia'] || 'Workspace Starter'
+        licencia: row['Licencia'] || row['licencia'] || row['Tipo de Licencia'] || 'Workspace Starter'
       }));
 
-      setUsuarios([...usuarios, ...nuevosCargados]);
+      setUsuarios([...usuarios, ...nuevosImportados]);
     };
     reader.readAsBinaryString(file);
   };
 
-  // Alta manual de usuario
+  // Alta Manual
   const handleAltaManual = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoNombre || !nuevoEmail) return;
+    if (!inputNombre || !inputEmail) return;
 
     const nuevoUsuario = {
       id: usuarios.length + 1,
-      nombre: nuevoNombre,
-      email: nuevoEmail,
-      perfil: nuevoPerfil,
+      nombre: inputNombre,
+      email: inputEmail,
+      perfil: inputPerfil,
       estado: 'Activo',
-      licencia: nuevaLicencia
+      licencia: inputLicencia
     };
 
     setUsuarios([...usuarios, nuevoUsuario]);
-    setNuevoNombre('');
-    setNuevoEmail('');
+    setInputNombre('');
+    setInputEmail('');
   };
 
-  // Cambio de estado (Alta / Baja lógica)
+  // Alternar Estado (Activo / Inactivo)
   const toggleEstado = (id: number) => {
     setUsuarios(usuarios.map(u => {
       if (u.id === id) {
@@ -133,7 +133,7 @@ export default function Dashboard() {
 
   const columnas = ['En Análisis', 'En Desarrollo', 'Testing/QA', 'Desplegado'];
 
-  // Estadísticas rápidas de usuarios
+  // Métricas
   const totalUsuarios = usuarios.length;
   const usuariosActivos = usuarios.filter(u => u.estado === 'Activo').length;
   const licenciasEnterprise = usuarios.filter(u => u.licencia.includes('Enterprise')).length;
@@ -142,17 +142,17 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-100 p-8 font-sans">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-slate-800">Cam Doctor · Dashboard Ejecutivo</h1>
-        <p className="text-slate-500 mt-1">Control integral de Usuarios, Licencias Workspace, Analítica y Tablero Jira</p>
+        <p className="text-slate-500 mt-1">Control operativo de Usuarios, Licencias Workspace, Analítica y Tablero Jira</p>
       </header>
 
-      {/* TARJETAS DE MÉTRICAS GENERALES */}
+      {/* TARJETAS DE MÉTRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-medium text-slate-500 mb-1">Total Registrados</h3>
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Total Usuarios</h3>
           <p className="text-3xl font-bold text-slate-800">{totalUsuarios}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-medium text-slate-500 mb-1">Usuarios Activos</h3>
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Activos</h3>
           <p className="text-3xl font-bold text-emerald-600">{usuariosActivos}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
@@ -160,41 +160,41 @@ export default function Dashboard() {
           <p className="text-3xl font-bold text-purple-600">{licenciasEnterprise}</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-medium text-slate-500 mb-1">Pacientes Atendidos (Reporte)</h3>
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Pacientes Atendidos</h3>
           <p className="text-3xl font-bold text-blue-600">{totalPacientes}</p>
         </div>
       </div>
 
-      {/* SECCIÓN 1: GESTIÓN DE MÉDICOS Y USUARIOS (DATOS COMPLETOS) */}
+      {/* SECCIÓN 1: GESTIÓN DE USUARIOS */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 mb-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">👥 Registro y Control de Perfiles & Licencias Workspace</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4">👥 Directorio de Usuarios, Mails y Licencias Workspace</h2>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 pb-6 border-b border-slate-200">
-          {/* Alta manual */}
+          {/* Alta Manual */}
           <form onSubmit={handleAltaManual} className="space-y-4 bg-slate-50 p-4 rounded-md border border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-700">Alta Manual de Usuario / Médico</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Alta Manual de Usuario</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="text"
                 placeholder="Nombre y Apellido"
-                value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
+                value={inputNombre}
+                onChange={(e) => setInputNombre(e.target.value)}
                 className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
                 required
               />
               <input
                 type="email"
                 placeholder="Correo electrónico (Mail)"
-                value={nuevoEmail}
-                onChange={(e) => setNuevoEmail(e.target.value)}
+                value={inputEmail}
+                onChange={(e) => setInputEmail(e.target.value)}
                 className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
                 required
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
-                value={nuevoPerfil}
-                onChange={(e) => setNuevoPerfil(e.target.value)}
+                value={inputPerfil}
+                onChange={(e) => setInputPerfil(e.target.value)}
                 className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
               >
                 <option value="Médico">Médico</option>
@@ -203,8 +203,8 @@ export default function Dashboard() {
                 <option value="Coordinador">Coordinador</option>
               </select>
               <select
-                value={nuevaLicencia}
-                onChange={(e) => setNuevaLicencia(e.target.value)}
+                value={inputLicencia}
+                onChange={(e) => setInputLicencia(e.target.value)}
                 className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
               >
                 <option value="Workspace Business Plus">Workspace Business Plus</option>
@@ -216,15 +216,15 @@ export default function Dashboard() {
               type="submit"
               className="w-full bg-blue-600 text-white py-2 px-4 rounded text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
-              Registrar en la Plataforma
+              Guardar Usuario
             </button>
           </form>
 
-          {/* Carga Masiva Excel */}
+          {/* Carga Masiva */}
           <div className="bg-slate-50 p-4 rounded-md border border-slate-200 flex flex-col justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-1">Carga Masiva de Altas / Bajas (Excel / CSV)</h3>
-              <p className="text-xs text-slate-500 mb-4">Columnas admitidas: Nombre, Email (o Mail), Perfil (o Rol), Estado, Licencia.</p>
+              <h3 className="text-sm font-semibold text-slate-700 mb-1">Carga Masiva (Excel / CSV)</h3>
+              <p className="text-xs text-slate-500 mb-4">Asegúrate de que tu archivo tenga cabeceras claras como: <b>Nombre</b>, <b>Email</b>, <b>Perfil</b>, <b>Licencia</b>.</p>
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
@@ -233,28 +233,28 @@ export default function Dashboard() {
               />
             </div>
             <div className="text-xs text-slate-400 mt-4">
-              💡 Todos los registros importados se actualizarán inmediatamente en la tabla inferior.
+              ✨ Se procesarán e integrarán automáticamente al listado inferior.
             </div>
           </div>
         </div>
 
-        {/* Tabla Detallada */}
+        {/* Tabla Limpia y Clara */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700 border-b border-slate-200">
                 <th className="p-3 font-semibold">Nombre y Apellido</th>
-                <th className="p-3 font-semibold">Mail (Correo)</th>
+                <th className="p-3 font-semibold">Mail / Correo</th>
                 <th className="p-3 font-semibold">Perfil</th>
                 <th className="p-3 font-semibold">Licencia Workspace</th>
                 <th className="p-3 font-semibold">Estado</th>
-                <th className="p-3 font-semibold text-center">Acciones (Altas / Bajas)</th>
+                <th className="p-3 font-semibold text-center">Gestión (Altas / Bajas)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {usuarios.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50">
-                  <td className="p-3 font-medium text-slate-800">{user.nombre}</td>
+                  <td className="p-3 font-semibold text-slate-800">{user.nombre}</td>
                   <td className="p-3 text-slate-600">{user.email}</td>
                   <td className="p-3">
                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold border border-blue-100">
@@ -288,10 +288,10 @@ export default function Dashboard() {
 
       {/* SECCIÓN 2: ANALÍTICA DE ATENCIONES */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 mb-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">📊 Analítica de Atenciones y Diagnósticos</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4">📊 Analítica de Atenciones</h2>
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Sube el archivo Excel o CSV con el reporte de consultas:
+            Sube el archivo Excel o CSV con el reporte de consultas de pacientes:
           </label>
           <input
             type="file"
@@ -302,7 +302,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-          <h3 className="text-sm font-medium text-slate-500 mb-2">Top Diagnósticos Registrados</h3>
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Top Diagnósticos</h3>
           <ul className="divide-y divide-slate-200">
             {topDiagnosticos.length > 0 ? (
               topDiagnosticos.map((item, index) => {
@@ -315,14 +315,14 @@ export default function Dashboard() {
                 );
               })
             ) : (
-              <p className="text-xs text-slate-400">Sube un archivo de atenciones para ver el ranking detallado.</p>
+              <p className="text-xs text-slate-400">Sube un archivo de atenciones para ver el ranking.</p>
             )}
           </ul>
         </div>
       </div>
 
-      {/* SECCIÓN 3: TABLERO KANBAN DE INCIDENCIAS */}
-      <h2 className="text-xl font-bold text-slate-800 mb-4">📌 Tablero de Seguimiento (Sincronizado con Supabase / Jira)</h2>
+      {/* SECCIÓN 3: TABLERO KANBAN */}
+      <h2 className="text-xl font-bold text-slate-800 mb-4">📌 Tablero de Incidencias</h2>
       <div className="flex gap-6 overflow-x-auto pb-4">
         {columnas.map((columna) => (
           <div key={columna} className="bg-slate-200 rounded-lg p-4 min-w-[320px] w-[320px] shadow-sm">
