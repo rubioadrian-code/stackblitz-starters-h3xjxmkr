@@ -1,0 +1,95 @@
+export const dynamic = 'force-dynamic';
+
+import { createClient } from '@supabase/supabase-js';
+
+// 1. Conexión a tu base de datos Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export default async function Dashboard() {
+  // 2. Traer los tickets desde Supabase
+  const { data: tickets } = await supabase.from('incidencias').select('*');
+
+  // 3. Definir las columnas de nuestro tablero
+  const columnas = ['En Análisis', 'En Desarrollo', 'Testing/QA', 'Desplegado'];
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-8 font-sans">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800">
+          Cam Doctor · Tracker
+        </h1>
+        <p className="text-slate-500 mt-1">
+          Sincronizado con Jira - Vista de Solo Lectura
+        </p>
+      </header>
+
+      <div className="flex gap-6 overflow-x-auto pb-4">
+        {columnas.map((columna) => (
+          <div
+            key={columna}
+            className="bg-slate-200 rounded-lg p-4 min-w-[320px] w-[320px] shadow-sm"
+          >
+            <h2 className="text-lg font-semibold text-slate-700 mb-4 flex justify-between items-center">
+              {columna}
+              <span className="bg-slate-300 text-slate-600 px-2 py-0.5 rounded-full text-sm">
+                {tickets?.filter((t) => t.status === columna).length || 0}
+              </span>
+            </h2>
+
+            <div className="flex flex-col gap-3">
+              {tickets
+                ?.filter((t) => t.status === columna)
+                .map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="bg-white p-4 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                        {ticket.jira_key}
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-2 py-1 rounded ${
+                          ticket.priority === 'Bloqueante'
+                            ? 'bg-red-100 text-red-700'
+                            : ticket.priority === 'Alta'
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {ticket.priority}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-slate-800 text-sm mb-2 leading-tight">
+                      {ticket.title}
+                    </h3>
+                    <p className="text-slate-500 text-xs mb-4 line-clamp-3">
+                      {ticket.description}
+                    </p>
+
+                    <div className="flex justify-between items-center text-xs text-slate-500 pt-3 border-t border-slate-100">
+                      <span className="flex items-center font-medium bg-slate-100 px-2 py-1 rounded">
+                        {ticket.module}
+                      </span>
+                      <span className="font-medium text-slate-600">
+                        👤 {ticket.jira_assignee}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+              {/* Tarjeta vacía si no hay tickets en la columna */}
+              {tickets?.filter((t) => t.status === columna).length === 0 && (
+                <div className="text-slate-400 text-sm text-center py-6 border-2 border-dashed border-slate-300 rounded-md">
+                  Sin incidencias
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
