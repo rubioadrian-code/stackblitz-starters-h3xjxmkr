@@ -17,17 +17,17 @@ export default function Dashboard() {
   const [totalPacientes, setTotalPacientes] = useState<number>(0);
   const [topDiagnosticos, setTopDiagnosticos] = useState<{ [key: string]: number }[]>([]);
 
-  // Estados para Gestión de Usuarios y Licencias
+  // Estados para Gestión de Usuarios y Licencias (Cam Doctor)
   const [usuarios, setUsuarios] = useState<any[]>([
-    { id: 1, nombre: 'Dr. Roberto Gómez', email: 'roberto.gomez@camdoctor.com', rol: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
-    { id: 2, nombre: 'Dra. María Laura Pérez', email: 'marialaura@camdoctor.com', rol: 'Médica', estado: 'Activo', licencia: 'Workspace Enterprise' },
-    { id: 3, nombre: 'Lic. Carlos Ruiz', email: 'carlos.ruiz@camdoctor.com', rol: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
-    { id: 4, nombre: 'Ana Sofía Admin', email: 'ana.admin@camdoctor.com', rol: 'Administrador', estado: 'Activo', licencia: 'Workspace Enterprise' }
+    { id: 1, nombre: 'Dr. Roberto Gómez', email: 'roberto.gomez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
+    { id: 2, nombre: 'Dra. María Laura Pérez', email: 'marialaura@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Enterprise' },
+    { id: 3, nombre: 'Lic. Carlos Ruiz', email: 'carlos.ruiz@camdoctor.com', perfil: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
+    { id: 4, nombre: 'Ana Sofía Admin', email: 'ana.admin@camdoctor.com', perfil: 'Administrador', estado: 'Activo', licencia: 'Workspace Enterprise' }
   ]);
   
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoEmail, setNuevoEmail] = useState('');
-  const [nuevoRol, setNuevoRol] = useState('Médico');
+  const [nuevoPerfil, setNuevoPerfil] = useState('Médico');
   const [nuevaLicencia, setNuevaLicencia] = useState('Workspace Business Plus');
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function Dashboard() {
     fetchTickets();
   }, []);
 
-  // Manejador para Analítica de Atenciones
+  // Manejador para Analítica de Atenciones (Excel/CSV)
   const handleAtencionesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,7 +75,7 @@ export default function Dashboard() {
     reader.readAsBinaryString(file);
   };
 
-  // Manejador para Carga Masiva de Usuarios por Excel
+  // Manejador para Carga Masiva de Usuarios
   const handleUsuariosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,9 +90,9 @@ export default function Dashboard() {
 
       const nuevosCargados = data.map((row, idx) => ({
         id: usuarios.length + idx + 1,
-        nombre: row['Nombre'] || row['nombre'] || 'Sin nombre',
-        email: row['Email'] || row['email'] || 'sin-correo@camdoctor.com',
-        rol: row['Rol'] || row['rol'] || 'Médico',
+        nombre: row['Nombre'] || row['nombre'] || row['Nombre y Apellido'] || 'Sin nombre',
+        email: row['Email'] || row['email'] || row['Mail'] || 'sin-correo@camdoctor.com',
+        perfil: row['Perfil'] || row['perfil'] || row['Rol'] || row['rol'] || 'Médico',
         estado: row['Estado'] || row['estado'] || 'Activo',
         licencia: row['Licencia'] || row['licencia'] || 'Workspace Starter'
       }));
@@ -111,7 +111,7 @@ export default function Dashboard() {
       id: usuarios.length + 1,
       nombre: nuevoNombre,
       email: nuevoEmail,
-      rol: nuevoRol,
+      perfil: nuevoPerfil,
       estado: 'Activo',
       licencia: nuevaLicencia
     };
@@ -121,7 +121,7 @@ export default function Dashboard() {
     setNuevoEmail('');
   };
 
-  // Cambio de estado (Alta/Baja lógica)
+  // Cambio de estado (Alta / Baja lógica)
   const toggleEstado = (id: number) => {
     setUsuarios(usuarios.map(u => {
       if (u.id === id) {
@@ -133,46 +133,69 @@ export default function Dashboard() {
 
   const columnas = ['En Análisis', 'En Desarrollo', 'Testing/QA', 'Desplegado'];
 
+  // Estadísticas rápidas de usuarios
+  const totalUsuarios = usuarios.length;
+  const usuariosActivos = usuarios.filter(u => u.estado === 'Activo').length;
+  const licenciasEnterprise = usuarios.filter(u => u.licencia.includes('Enterprise')).length;
+
   return (
     <div className="min-h-screen bg-slate-100 p-8 font-sans">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800">Cam Doctor · Panel de Control General</h1>
-        <p className="text-slate-500 mt-1">Gestión de Usuarios, Licencias, Analítica y Tablero de Incidencias</p>
+        <h1 className="text-3xl font-bold text-slate-800">Cam Doctor · Dashboard Ejecutivo</h1>
+        <p className="text-slate-500 mt-1">Control integral de Usuarios, Licencias Workspace, Analítica y Tablero Jira</p>
       </header>
 
-      {/* SECCIÓN 1: GESTIÓN DE MÉDICOS Y USUARIOS */}
+      {/* TARJETAS DE MÉTRICAS GENERALES */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Total Registrados</h3>
+          <p className="text-3xl font-bold text-slate-800">{totalUsuarios}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Usuarios Activos</h3>
+          <p className="text-3xl font-bold text-emerald-600">{usuariosActivos}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Licencias Enterprise</h3>
+          <p className="text-3xl font-bold text-purple-600">{licenciasEnterprise}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-medium text-slate-500 mb-1">Pacientes Atendidos (Reporte)</h3>
+          <p className="text-3xl font-bold text-blue-600">{totalPacientes}</p>
+        </div>
+      </div>
+
+      {/* SECCIÓN 1: GESTIÓN DE MÉDICOS Y USUARIOS (DATOS COMPLETOS) */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 mb-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">👥 Registro y Control de Usuarios & Licencias Workspace</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4">👥 Registro y Control de Perfiles & Licencias Workspace</h2>
         
-        {/* Controles: Alta manual y Carga masiva */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 pb-6 border-b border-slate-200">
-          
-          {/* Formulario de Alta Manual */}
+          {/* Alta manual */}
           <form onSubmit={handleAltaManual} className="space-y-4 bg-slate-50 p-4 rounded-md border border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-700">Alta Manual de Profesional / Usuario</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Alta Manual de Usuario / Médico</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="text"
                 placeholder="Nombre y Apellido"
                 value={nuevoNombre}
                 onChange={(e) => setNuevoNombre(e.target.value)}
-                className="p-2 border border-slate-300 rounded text-sm bg-white"
+                className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
                 required
               />
               <input
                 type="email"
-                placeholder="Correo electrónico"
+                placeholder="Correo electrónico (Mail)"
                 value={nuevoEmail}
                 onChange={(e) => setNuevoEmail(e.target.value)}
-                className="p-2 border border-slate-300 rounded text-sm bg-white"
+                className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
                 required
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
-                value={nuevoRol}
-                onChange={(e) => setNuevoRol(e.target.value)}
-                className="p-2 border border-slate-300 rounded text-sm bg-white"
+                value={nuevoPerfil}
+                onChange={(e) => setNuevoPerfil(e.target.value)}
+                className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
               >
                 <option value="Médico">Médico</option>
                 <option value="Nutricionista">Nutricionista</option>
@@ -182,7 +205,7 @@ export default function Dashboard() {
               <select
                 value={nuevaLicencia}
                 onChange={(e) => setNuevaLicencia(e.target.value)}
-                className="p-2 border border-slate-300 rounded text-sm bg-white"
+                className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
               >
                 <option value="Workspace Business Plus">Workspace Business Plus</option>
                 <option value="Workspace Enterprise">Workspace Enterprise</option>
@@ -193,15 +216,15 @@ export default function Dashboard() {
               type="submit"
               className="w-full bg-blue-600 text-white py-2 px-4 rounded text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
-              Registrar Usuario
+              Registrar en la Plataforma
             </button>
           </form>
 
           {/* Carga Masiva Excel */}
           <div className="bg-slate-50 p-4 rounded-md border border-slate-200 flex flex-col justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-1">Carga Masiva (Excel / CSV)</h3>
-              <p className="text-xs text-slate-500 mb-4">Sube un archivo con columnas: Nombre, Email, Rol, Estado, Licencia.</p>
+              <h3 className="text-sm font-semibold text-slate-700 mb-1">Carga Masiva de Altas / Bajas (Excel / CSV)</h3>
+              <p className="text-xs text-slate-500 mb-4">Columnas admitidas: Nombre, Email (o Mail), Perfil (o Rol), Estado, Licencia.</p>
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
@@ -210,19 +233,19 @@ export default function Dashboard() {
               />
             </div>
             <div className="text-xs text-slate-400 mt-4">
-              💡 Tip: Ideal para actualizar altas y bajas masivas del personal médico de Cam Doctor.
+              💡 Todos los registros importados se actualizarán inmediatamente en la tabla inferior.
             </div>
           </div>
         </div>
 
-        {/* Tabla de Usuarios Registrados */}
+        {/* Tabla Detallada */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700 border-b border-slate-200">
-                <th className="p-3 font-semibold">Nombre</th>
-                <th className="p-3 font-semibold">Email</th>
-                <th className="p-3 font-semibold">Rol</th>
+                <th className="p-3 font-semibold">Nombre y Apellido</th>
+                <th className="p-3 font-semibold">Mail (Correo)</th>
+                <th className="p-3 font-semibold">Perfil</th>
                 <th className="p-3 font-semibold">Licencia Workspace</th>
                 <th className="p-3 font-semibold">Estado</th>
                 <th className="p-3 font-semibold text-center">Acciones (Altas / Bajas)</th>
@@ -234,11 +257,11 @@ export default function Dashboard() {
                   <td className="p-3 font-medium text-slate-800">{user.nombre}</td>
                   <td className="p-3 text-slate-600">{user.email}</td>
                   <td className="p-3">
-                    <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-semibold">
-                      {user.rol}
+                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold border border-blue-100">
+                      {user.perfil}
                     </span>
                   </td>
-                  <td className="p-3 text-slate-600 font-medium">{user.licencia}</td>
+                  <td className="p-3 text-slate-700 font-medium">{user.licencia}</td>
                   <td className="p-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                       user.estado === 'Activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
@@ -265,10 +288,10 @@ export default function Dashboard() {
 
       {/* SECCIÓN 2: ANALÍTICA DE ATENCIONES */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 mb-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">📊 Analítica de Atenciones y Consultas</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4">📊 Analítica de Atenciones y Diagnósticos</h2>
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Sube tu archivo Excel o CSV de reporte de atenciones de pacientes:
+            Sube el archivo Excel o CSV con el reporte de consultas:
           </label>
           <input
             type="file"
@@ -278,35 +301,28 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h3 className="text-sm font-medium text-slate-500 mb-1">Total de Pacientes Atendidos</h3>
-            <p className="text-4xl font-bold text-blue-600">{totalPacientes}</p>
-          </div>
-
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 md:col-span-2">
-            <h3 className="text-sm font-medium text-slate-500 mb-2">Top Diagnósticos</h3>
-            <ul className="divide-y divide-slate-200">
-              {topDiagnosticos.length > 0 ? (
-                topDiagnosticos.map((item, index) => {
-                  const [diag, count] = Object.entries(item)[0];
-                  return (
-                    <li key={index} className="py-1.5 flex justify-between text-sm">
-                      <span className="text-slate-700 font-medium">{index + 1}. {diag}</span>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold">{count} casos</span>
-                    </li>
-                  );
-                })
-              ) : (
-                <p className="text-xs text-slate-400">Sube un reporte de atenciones para visualizar el ranking.</p>
-              )}
-            </ul>
-          </div>
+        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Top Diagnósticos Registrados</h3>
+          <ul className="divide-y divide-slate-200">
+            {topDiagnosticos.length > 0 ? (
+              topDiagnosticos.map((item, index) => {
+                const [diag, count] = Object.entries(item)[0];
+                return (
+                  <li key={index} className="py-2 flex justify-between text-sm">
+                    <span className="text-slate-700 font-medium">{index + 1}. {diag}</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold">{count} casos</span>
+                  </li>
+                );
+              })
+            ) : (
+              <p className="text-xs text-slate-400">Sube un archivo de atenciones para ver el ranking detallado.</p>
+            )}
+          </ul>
         </div>
       </div>
 
       {/* SECCIÓN 3: TABLERO KANBAN DE INCIDENCIAS */}
-      <h2 className="text-xl font-bold text-slate-800 mb-4">📌 Tablero de Incidencias (Sincronizado con Jira / Supabase)</h2>
+      <h2 className="text-xl font-bold text-slate-800 mb-4">📌 Tablero de Seguimiento (Sincronizado con Supabase / Jira)</h2>
       <div className="flex gap-6 overflow-x-auto pb-4">
         {columnas.map((columna) => (
           <div key={columna} className="bg-slate-200 rounded-lg p-4 min-w-[320px] w-[320px] shadow-sm">
