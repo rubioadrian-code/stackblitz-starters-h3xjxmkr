@@ -10,25 +10,30 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Dashboard() {
-  // Estados para el Tablero Jira
   const [tickets, setTickets] = useState<any[]>([]);
-
-  // Estados para Analítica
   const [totalPacientes, setTotalPacientes] = useState<number>(0);
   const [topDiagnosticos, setTopDiagnosticos] = useState<{ [key: string]: number }[]>([]);
 
-  // Estado inicial con datos limpios y estructurados de usuarios
+  // Base de datos de usuarios con Nombre, Apellido, Mail, Perfil, Licencia y Estado claramente separados
   const [usuarios, setUsuarios] = useState<any[]>([
-    { id: 1, nombre: 'Roberto Gómez', email: 'roberto.gomez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
-    { id: 2, nombre: 'María Laura Pérez', email: 'marialaura.perez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Enterprise' },
-    { id: 3, nombre: 'Carlos Ruiz', email: 'carlos.ruiz@camdoctor.com', perfil: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
-    { id: 4, nombre: 'Ana Sofía Admin', email: 'ana.admin@camdoctor.com', perfil: 'Administrador', estado: 'Activo', licencia: 'Workspace Enterprise' }
+    { id: 1, nombre: 'Roberto', apellido: 'Gómez', email: 'roberto.gomez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Business Plus' },
+    { id: 2, nombre: 'María Laura', apellido: 'Pérez', email: 'marialaura.perez@camdoctor.com', perfil: 'Médico', estado: 'Activo', licencia: 'Workspace Enterprise' },
+    { id: 3, nombre: 'Carlos', apellido: 'Ruiz', email: 'carlos.ruiz@camdoctor.com', perfil: 'Nutricionista', estado: 'Inactivo', licencia: 'Workspace Starter' },
+    { id: 4, nombre: 'Ana Sofía', apellido: 'Admin', email: 'ana.admin@camdoctor.com', perfil: 'Administrador', estado: 'Activo', licencia: 'Workspace Enterprise' }
   ]);
   
   const [inputNombre, setInputNombre] = useState('');
+  const [inputApellido, setInputApellido] = useState('');
   const [inputEmail, setInputEmail] = useState('');
   const [inputPerfil, setInputPerfil] = useState('Médico');
   const [inputLicencia, setInputLicencia] = useState('Workspace Business Plus');
+
+  // Estados para filtros por columna
+  const [filtroNombre, setFiltroNombre] = useState('');
+  const [filtroApellido, setFiltroApellido] = useState('');
+  const [filtroEmail, setFiltroEmail] = useState('');
+  const [filtroPerfil, setFiltroPerfil] = useState('');
+  const [filtroLicencia, setFiltroLicencia] = useState('');
 
   useEffect(() => {
     async function fetchTickets() {
@@ -75,7 +80,7 @@ export default function Dashboard() {
     reader.readAsBinaryString(file);
   };
 
-  // Carga Masiva de Usuarios vía Excel (Mapeo Estricto)
+  // Carga Masiva de Usuarios vía Excel
   const handleUsuariosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,7 +95,8 @@ export default function Dashboard() {
 
       const nuevosImportados = data.map((row, idx) => ({
         id: usuarios.length + idx + 1,
-        nombre: row['Nombre'] || row['nombre'] || row['Nombre y Apellido'] || row['Apellido y Nombre'] || 'Sin nombre',
+        nombre: row['Nombre'] || row['nombre'] || 'Sin nombre',
+        apellido: row['Apellido'] || row['apellido'] || '',
         email: row['Email'] || row['email'] || row['Mail'] || row['Correo'] || 'sin-correo@camdoctor.com',
         perfil: row['Perfil'] || row['perfil'] || row['Rol'] || row['rol'] || 'Médico',
         estado: row['Estado'] || row['estado'] || 'Activo',
@@ -105,11 +111,12 @@ export default function Dashboard() {
   // Alta Manual
   const handleAltaManual = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputNombre || !inputEmail) return;
+    if (!inputNombre || !inputApellido || !inputEmail) return;
 
     const nuevoUsuario = {
       id: usuarios.length + 1,
       nombre: inputNombre,
+      apellido: inputApellido,
       email: inputEmail,
       perfil: inputPerfil,
       estado: 'Activo',
@@ -118,22 +125,23 @@ export default function Dashboard() {
 
     setUsuarios([...usuarios, nuevoUsuario]);
     setInputNombre('');
+    setInputApellido('');
     setInputEmail('');
   };
 
-  // Alternar Estado (Activo / Inactivo)
-  const toggleEstado = (id: number) => {
-    setUsuarios(usuarios.map(u => {
-      if (u.id === id) {
-        return { ...u, estado: u.estado === 'Activo' ? 'Inactivo' : 'Activo' };
-      }
-      return u;
-    }));
-  };
+  // Filtrado de usuarios según los inputs de filtro por columna
+  const usuariosFiltrados = usuarios.filter(user => {
+    return (
+      user.nombre.toLowerCase().includes(filtroNombre.toLowerCase()) &&
+      user.apellido.toLowerCase().includes(filtroApellido.toLowerCase()) &&
+      user.email.toLowerCase().includes(filtroEmail.toLowerCase()) &&
+      user.perfil.toLowerCase().includes(filtroPerfil.toLowerCase()) &&
+      user.licencia.toLowerCase().includes(filtroLicencia.toLowerCase())
+    );
+  });
 
   const columnas = ['En Análisis', 'En Desarrollo', 'Testing/QA', 'Desplegado'];
 
-  // Métricas
   const totalUsuarios = usuarios.length;
   const usuariosActivos = usuarios.filter(u => u.estado === 'Activo').length;
   const licenciasEnterprise = usuarios.filter(u => u.licencia.includes('Enterprise')).length;
@@ -176,12 +184,22 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="text"
-                placeholder="Nombre y Apellido"
+                placeholder="Nombre"
                 value={inputNombre}
                 onChange={(e) => setInputNombre(e.target.value)}
                 className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
                 required
               />
+              <input
+                type="text"
+                placeholder="Apellido"
+                value={inputApellido}
+                onChange={(e) => setInputApellido(e.target.value)}
+                className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="email"
                 placeholder="Correo electrónico (Mail)"
@@ -190,8 +208,6 @@ export default function Dashboard() {
                 className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
                 required
               />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
                 value={inputPerfil}
                 onChange={(e) => setInputPerfil(e.target.value)}
@@ -202,10 +218,12 @@ export default function Dashboard() {
                 <option value="Administrador">Administrador</option>
                 <option value="Coordinador">Coordinador</option>
               </select>
+            </div>
+            <div>
               <select
                 value={inputLicencia}
                 onChange={(e) => setInputLicencia(e.target.value)}
-                className="p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
+                className="w-full p-2 border border-slate-300 rounded text-sm bg-white text-slate-800"
               >
                 <option value="Workspace Business Plus">Workspace Business Plus</option>
                 <option value="Workspace Enterprise">Workspace Enterprise</option>
@@ -224,7 +242,7 @@ export default function Dashboard() {
           <div className="bg-slate-50 p-4 rounded-md border border-slate-200 flex flex-col justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-1">Carga Masiva (Excel / CSV)</h3>
-              <p className="text-xs text-slate-500 mb-4">Asegúrate de que tu archivo tenga cabeceras claras como: <b>Nombre</b>, <b>Email</b>, <b>Perfil</b>, <b>Licencia</b>.</p>
+              <p className="text-xs text-slate-500 mb-4">Asegúrate de que tu archivo tenga cabeceras como: <b>Nombre</b>, <b>Apellido</b>, <b>Email</b>, <b>Perfil</b>, <b>Licencia</b>.</p>
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
@@ -238,23 +256,73 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tabla Limpia y Clara */}
+        {/* Tabla con Filtros por Columna (Sin columna de acciones de bajas/altas) */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-100 text-slate-700 border-b border-slate-200">
-                <th className="p-3 font-semibold">Nombre y Apellido</th>
+                <th className="p-3 font-semibold">Nombre</th>
+                <th className="p-3 font-semibold">Apellido</th>
                 <th className="p-3 font-semibold">Mail / Correo</th>
                 <th className="p-3 font-semibold">Perfil</th>
                 <th className="p-3 font-semibold">Licencia Workspace</th>
                 <th className="p-3 font-semibold">Estado</th>
-                <th className="p-3 font-semibold text-center">Gestión (Altas / Bajas)</th>
+              </tr>
+              {/* Fila de Filtros por Columna */}
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="p-2">
+                  <input
+                    type="text"
+                    placeholder="Filtrar nombre..."
+                    value={filtroNombre}
+                    onChange={(e) => setFiltroNombre(e.target.value)}
+                    className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal"
+                  />
+                </th>
+                <th className="p-2">
+                  <input
+                    type="text"
+                    placeholder="Filtrar apellido..."
+                    value={filtroApellido}
+                    onChange={(e) => setFiltroApellido(e.target.value)}
+                    className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal"
+                  />
+                </th>
+                <th className="p-2">
+                  <input
+                    type="text"
+                    placeholder="Filtrar mail..."
+                    value={filtroEmail}
+                    onChange={(e) => setFiltroEmail(e.target.value)}
+                    className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal"
+                  />
+                </th>
+                <th className="p-2">
+                  <input
+                    type="text"
+                    placeholder="Filtrar perfil..."
+                    value={filtroPerfil}
+                    onChange={(e) => setFiltroPerfil(e.target.value)}
+                    className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal"
+                  />
+                </th>
+                <th className="p-2">
+                  <input
+                    type="text"
+                    placeholder="Filtrar licencia..."
+                    value={filtroLicencia}
+                    onChange={(e) => setFiltroLicencia(e.target.value)}
+                    className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal"
+                  />
+                </th>
+                <th className="p-2 text-center text-xs text-slate-400 font-normal">-</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {usuarios.map((user) => (
+              {usuariosFiltrados.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50">
                   <td className="p-3 font-semibold text-slate-800">{user.nombre}</td>
+                  <td className="p-3 font-semibold text-slate-800">{user.apellido}</td>
                   <td className="p-3 text-slate-600">{user.email}</td>
                   <td className="p-3">
                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold border border-blue-100">
@@ -269,18 +337,15 @@ export default function Dashboard() {
                       {user.estado}
                     </span>
                   </td>
-                  <td className="p-3 text-center">
-                    <button
-                      onClick={() => toggleEstado(user.id)}
-                      className={`px-3 py-1 rounded text-xs font-semibold text-white transition-colors ${
-                        user.estado === 'Activo' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
-                      }`}
-                    >
-                      {user.estado === 'Activo' ? 'Dar de Baja' : 'Reactivar'}
-                    </button>
-                  </td>
                 </tr>
               ))}
+              {usuariosFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-4 text-center text-slate-400 text-sm">
+                    No se encontraron usuarios con los filtros aplicados.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
